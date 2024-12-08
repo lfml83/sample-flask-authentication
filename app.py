@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from models.user import User
 from database import db
-from flask_login import LoginManager
+from flask_login import LoginManager, login_user, current_user, logout_user, login_required
 
 
 app =Flask(__name__)
@@ -13,17 +13,40 @@ login_manager = LoginManager()
 db.init_app(app)
 login_manager.init_app(app)
 
+#view login
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)
 
 @app.route('/login', methods=["POST"])
-def login()
+
+def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
 
+    # verficando username e password
     if username and password:
-        pass
+
+        user = User.query.filter_by(username=username).first()# pegar o id do usuario
+
+        if user and user.password ==password:
+            login_user(user) #auntenticar usando cookies no postman header cookies
+            print(current_user.is_authenticated)       
+            return jsonify({"message": "Autenticação realizada com sucesso"})
     
     return jsonify({"message": "Credenciais invalidas"}), 400
+
+
+
+
+@app.route("/logout", methods=['GET'])
+@login_required # decorador, essa rota so pode entrar se estiver logado
+def logout():
+    logout_user()
+    return jsonify({"message" : "Logout realizado com sucesso"})
 
 @app.route("/hello-world", methods=["GET"])
 def hello_wolrd():
