@@ -1,2 +1,3 @@
 # sample-flask-authentication
-Aunthentication sample created in flask for python
+
+Repositório criado para armazednar o código da API de autenticação com banco de dados
