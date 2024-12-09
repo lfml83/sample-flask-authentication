@@ -40,13 +40,27 @@ def login():
     return jsonify({"message": "Credenciais invalidas"}), 400
 
 
-
-
 @app.route("/logout", methods=['GET'])
 @login_required # decorador, essa rota so pode entrar se estiver logado
 def logout():
     logout_user()
     return jsonify({"message" : "Logout realizado com sucesso"})
+
+
+@app.route('/user', methods=['POST'])
+def create_user():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+    
+    if username and password:
+        user = User(username=username, password=password)
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({"message" : "Usuário cadastrado com sucesso"})
+
+    return jsonify({"message" : "Dados inválidas"}), 400 # bad request dados incorretos
+
 
 @app.route("/hello-world", methods=["GET"])
 def hello_wolrd():
