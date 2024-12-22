@@ -2,11 +2,11 @@ from flask import Flask, request, jsonify
 from models.user import User
 from database import db
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required
-
+import bcrypt
 
 app =Flask(__name__)
 app.config['SECRET_KEY'] = "your_secret_key"
-app.config['SQLALCHEMY_DATABASE_URI']='sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI']='mysql+pymysql://root:admin123@127.0.0.1:3306/flask-crud'
 
 login_manager = LoginManager()
 
@@ -32,7 +32,7 @@ def login():
 
         user = User.query.filter_by(username=username).first()# pegar o id do usuario
 
-        if user and user.password ==password:
+        if user and bcrypt.checkpw(str.encode(password),str.encode(user.password)):
             login_user(user) #auntenticar usando cookies no postman header cookies
             print(current_user.is_authenticated)       
             return jsonify({"message": "Autenticação realizada com sucesso"})
@@ -54,7 +54,9 @@ def create_user():
     password = data.get("password")
     
     if username and password:
-        user = User(username=username, password=password)
+        hashed_password = bcrypt.hashpw(str.encode(password), bcrypt.gensalt()) # encode significa que esta mudando para bytes
+
+        user = User(username=username, password=hashed_password, role='user')
         db.session.add(user)
         db.session.commit()
         return jsonify({"message" : "Usuário cadastrado com sucesso"})
@@ -78,7 +80,8 @@ def read_user(id_user):
 def update_user(id_user):
     data = request.json #pegando dados de uma requisicao
     user = User.query.get(id_user) # atraves do dado de requisicao procurar no BD o user
-    
+    if id_user != current_user.id and current_user.role == 'user':
+        return   jsonify({'message' : "Operacao não permitida"}), 403
     if user and data.get("password"): # 
         user.password =data.get("password")
         db.session.commit()
@@ -93,6 +96,9 @@ def update_user(id_user):
 def delete_user(id_user):
     user = User.query.get(id_user)
 
+    if current_user.role != 'admin':
+    
+        return jsonify({'message' : 'Operação não permitida'}), 403
     if id_user == current_user.id:
         return jsonify({"message" : "Deleção nao permitida"}), 403
     if user and id_user != current_user.id:
@@ -102,10 +108,6 @@ def delete_user(id_user):
     
     return jsonify({"message" : "Usuário não encontrado"}), 404
 
-
-@app.route("/hello-world", methods=["GET"])
-def hello_wolrd():
-    return "hello world"
 
 if __name__ == '__main__':
     app.run(debug=True)
